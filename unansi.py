@@ -38,29 +38,38 @@ BG_COLORS = {
     9 : "#ffffff",
 }
 
-def replacer(m):
-    params = [p for p in m.group(1).split(";") if p]
-    if not params:
-        return ""
-    color = 0
-    bg = 0
-    bright = False
-    for p in params:
-        p = int(p)
-        if 30 <= p <= 37 or p == 39:
-            color = p
-        elif 40 <= p <= 47 or p == 49:
-            bg = p
-        elif p == 1:
-            bright = True
-    colors = BRIGHT_COLORS if bright else COLORS
-    return "</span><span style='color:%s; background-color:%s; font-weight: %s'>" % (colors.get(color-30), BG_COLORS.get(bg-40), "bold" if bright else "normal")
+class AnsiReplacer(object):
+    def __init__(self):
+        self.spanClosed = True
+
+    def __call__(self, m):
+        params = [p for p in m.group(1).split(";") if p]
+        if not params:
+            self.spanClosed = True
+            return "</span>"
+        color = 0
+        bg = 0
+        bright = False
+        for p in params:
+            p = int(p)
+            if 30 <= p <= 37 or p == 39:
+                color = p
+            elif 40 <= p <= 47 or p == 49:
+                bg = p
+            elif p == 1:
+                bright = True
+        colors = BRIGHT_COLORS if bright else COLORS
+        color = colors.get(color-30)
+        bg = BG_COLORS.get(bg-40)
+        span = "<span style='color:%s; background-color:%s; font-weight: %s'>" % (color, bg, "bold" if bright else "normal")
+        if not self.spanClosed:
+            span = "</span>" + span
+        self.spanClosed = False
+        return span
 
 if __name__ == "__main__":
-    print "<html><body><pre>"
+    print "<html><body style='background-color:#000000; color:#aaaaaa;'><pre>"
     for line in sys.stdin.readlines():
-        html = re.sub("\x1b\[([0-9;]*?)m", replacer, line)
-        html = html.replace("</span>", "", 1)
-        html = html + "</span>"
+        html = re.sub("\x1b\[([0-9;]*?)m", AnsiReplacer(), line)
         sys.stdout.write(html)
     print "</pre></body></html>"
