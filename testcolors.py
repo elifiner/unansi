@@ -20,7 +20,7 @@ def adjust_to_background(color, source_bg, target_bg):
     h,s,v = rgb2hsv(color)
     source_v = rgb2hsv(source_bg)[2]
     target_v = rgb2hsv(target_bg)[2]
-    new_v = target_v - (1 - (v - source_v))
+    new_v = abs(target_v - (1 - (v - source_v)))
     return hsv2rgb((h, s, new_v))
 
 if __name__ == "__main__":
