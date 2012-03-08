@@ -1,5 +1,6 @@
-
+#!/usr/bin/python -u
 import re
+import sys
 
 COLORS = {
     0 : "#2e3436",
@@ -37,34 +38,29 @@ BG_COLORS = {
     9 : "#ffffff",
 }
 
-
-def colorize(string, color, background=None, bright=False):
-    color = 30 + COLORS.get(color, COLORS["default"])
-    background = 40 + COLORS.get(background, COLORS["default"])
-    return "\x1b[0;%d;%d;%dm%s\x1b[0;m" % (int(bright), color, background, string)
+def replacer(m):
+    params = [p for p in m.group(1).split(";") if p]
+    if not params:
+        return ""
+    color = 0
+    bg = 0
+    bright = False
+    for p in params:
+        p = int(p)
+        if 30 <= p <= 37 or p == 39:
+            color = p
+        elif 40 <= p <= 47 or p == 49:
+            bg = p
+        elif p == 1:
+            bright = True
+    colors = BRIGHT_COLORS if bright else COLORS
+    return "</span><span style='color:%s; background-color:%s; font-weight: %s'>" % (colors.get(color-30), BG_COLORS.get(bg-40), "bold" if bright else "normal")
 
 if __name__ == "__main__":
-    data = '\x1b[1;40;37m13/02-13:12:30\x1b[m \x1b[1;40;32m== TEST ssh://gitserver.xiv.ibm.com/git/qa/tests/dev_reg/manager_election.py[lines/dixie]:ManagerElection (926318) \x1b[m'
-    data = open("test.ansi").read()
-
-    def replacer(m):
-        params = [p for p in m.group(1).split(";") if p]
-        if not params:
-            return ""
-        color = 0
-        bg = 0
-        bright = False
-        for p in params:
-            p = int(p)
-            if 30 <= p <= 37 or p == 39:
-                color = p
-            elif 40 <= p <= 47 or p == 49:
-                bg = p
-            elif p == 1:
-                bright = True
-        colors = BRIGHT_COLORS if bright else COLORS
-        return "</span><span style='color:%s; background-color:%s; font-weight: %s'>" % (colors.get(color-30), BG_COLORS.get(bg-40), "bold" if bright else "normal")
-
     print "<html><body><pre>"
-    print re.sub("\x1b\[([0-9;]*?)m", replacer, data)
+    for line in sys.stdin.readlines():
+        html = re.sub("\x1b\[([0-9;]*?)m", replacer, line)
+        html = html.replace("</span>", "", 1)
+        html = html + "</span>"
+        sys.stdout.write(html)
     print "</pre></body></html>"
